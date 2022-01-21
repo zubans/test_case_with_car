@@ -3,7 +3,11 @@ namespace main;
 
 require 'CarsHelper.php';
 
-class Main 
+use Fields;
+use EmptyCarArrayException;
+use UnpermitedCarException;
+
+class Main
 {
     /**
      * @var array
@@ -19,56 +23,41 @@ class Main
      * @param $place array
      * @param $cars array
      */
-    function __construct(array $places, array $cars) { // $places = [3, 4, 2] $cars = ['t', 'c', 'c' , 't']
+    function __construct(array $places, array $cars) {
         $this->places = $places;
         $this->cars = $cars;
     }
 
    /**
-    * @return array
+    * @return mixed
     */
-    function getResult(): array
+    function getResult()
     {
-        $carsHelper = new CarsHelper($this->cars);
+        try {
+            $carsHelper = new CarsHelper($this->cars);
+        } catch (EmptyCarArrayException $e) {
+            return $e->getMessage();
+        } catch (UnpermitedCarException $e) {
+            return $e->getMessage();
+        }
 
         foreach ($this->cars as $car) {
             if ($carsHelper->isBigCar($car)) {
-                $result[] = $this->fixPlaceCountForBigCar(); //todo fix function for big and small cars
-            } elseif ($carsHelper->isSmallCar($car)) {
-                $reversedFloors = array_reverse($this->places);
-                foreach (array_keys($reversedFloors) as $key) {
-                    if (0 == $reversedFloors[$key]) {
-                        if ($key == (count($this->places) - 1)) {
-                            $result[] = 'n';
-                            break;
-                        }
-                        continue;
-                    }
+                $result[] = $carsHelper->usePlaceForBigCar($this->places[0]);
 
-                    $reversedFloors[$key]--;
-                    $result[] = 'y';
-                    $this->places = array_reverse($reversedFloors);
-                    break;
+                if ($this->places[0] > 0) {
+                    $this->places[0]--;
                 }
+            } elseif ($carsHelper->isSmallCar($car)) {
+                $res = $carsHelper->usePlaceForSmallCar($this->places);
+
+                array_push($result, $res[Fields::RESULT]);
+                $this->places = $res[Fields::PLACES];
             } else {
-                $result[] = 'unknown car type';
+                $result[] = Fields::UNKNOWN_CARD;
             }
-            print_r($this->places);
         }
 
         return $result;
-    }
-
-    /**
-     * @return string
-     */
-    private function fixPlaceCountForBigCar(): string
-    {
-        if ($this->places[0] > 0) {
-            $this->places[0]--;
-            return 'y';
-        }
-        
-        return 'n';
     }
 }
